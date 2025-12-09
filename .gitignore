@@ -1,3 +1,4 @@
 node_modules
 .env
 debug-api-response.json
+ARCHITECTURE.md

@@ -267,6 +267,85 @@ function getQueueFromGraph(info) {
     return "Невідомо"
   }
   return houseData.sub_type_reason.join(", ")
+}
+
+function getCurrentPowerStatus(intervals) {
+  // Отримуємо поточний час в Києві
+  const now = new Date()
+  const kyivTime = new Date(now.toLocaleString("en-US", { timeZone: "Europe/Kyiv" }))
+  const currentMinutes = kyivTime.getHours() * 60 + kyivTime.getMinutes()
+
+  // Конвертуємо час "HH:MM" в хвилини
+  const timeToMinutes = (timeStr) => {
+    const [hours, minutes] = timeStr.split(":").map(Number)
+    return hours * 60 + minutes
+  }
+
+  // Форматуємо різницю в хвилинах в "X год. YY хв."
+  const formatTimeDiff = (diffMinutes) => {
+    const hours = Math.floor(diffMinutes / 60)
+    const minutes = diffMinutes % 60
+    return `${hours} год. ${String(minutes).padStart(2, "0")} хв.`
+  }
+
+  // Фільтруємо тільки інтервали відключень (off)
+  const offIntervals = intervals.filter(i => i.type === "off")
+
+  if (offIntervals.length === 0) {
+    return {
+      hasPower: true,
+      statusText: "🟢 <b>ЕЛЕКТРИКА Є</b>",
+      nextEventText: "✅ Відключень не заплановано"
+    }
+  }
+
+  // Перевіряємо чи зараз є відключення
+  for (const interval of offIntervals) {
+    const startMinutes = timeToMinutes(interval.start)
+    let endMinutes = timeToMinutes(interval.end)
+
+    // Обробка випадку коли end = "24:00" (кінець дня)
+    if (endMinutes === 0 && interval.end === "24:00") {
+      endMinutes = 24 * 60
+    }
+
+    if (currentMinutes >= startMinutes && currentMinutes < endMinutes) {
+      // Зараз відключення - рахуємо час до включення
+      const minutesUntilOn = endMinutes - currentMinutes
+      return {
+        hasPower: false,
+        statusText: "🔴 <b>ЕЛЕКТРИКИ НЕМАЄ</b>",
+        nextEventText: `⏱ Буде увімкнено через: ${formatTimeDiff(minutesUntilOn)}`
+      }
+    }
+  }
+
+  // Електрика є - шукаємо наступне відключення
+  let nextOffMinutes = null
+  for (const interval of offIntervals) {
+    const startMinutes = timeToMinutes(interval.start)
+    if (startMinutes > currentMinutes) {
+      if (nextOffMinutes === null || startMinutes < nextOffMinutes) {
+        nextOffMinutes = startMinutes
+      }
+    }
+  }
+
+  if (nextOffMinutes !== null) {
+    const minutesUntilOff = nextOffMinutes - currentMinutes
+    return {
+      hasPower: true,
+      statusText: "🟢 <b>ЕЛЕКТРИКА Є</b>",
+      nextEventText: `⏱ Буде вимкнено через: ${formatTimeDiff(minutesUntilOff)}`
+    }
+  }
+
+  // Всі відключення на сьогодні вже пройшли
+  return {
+    hasPower: true,
+    statusText: "🟢 <b>ЕЛЕКТРИКА Є</b>",
+    nextEventText: "✅ Більше відключень сьогодні не заплановано"
+  }
 } function generateMessage(info) {
   console.log("🌀 Generating message...")
 
@@ -320,27 +399,25 @@ function getQueueFromGraph(info) {
     tomorrowText = "⏳ Графік на завтра ще не доступний (зазвичай з'являється ввечері)"
   }
 
+  // Визначаємо поточний статус електропостачання
+  const powerStatus = getCurrentPowerStatus(todayIntervals)
+
   const message = [
     `⚡️ <b>Статус електропостачання</b>`,
+    powerStatus.statusText,
+    powerStatus.nextEventText,
+    separator,
     `🏠 <b>Адреса:</b> ${address}`,
     `🔢 <b>Черга:</b> ${queue}`,
-    ``,
     separator,
-    ``,
     `📅 <b>Графік на сьогодні (${formatDate(today)}):</b>`,
-    ``,
     formatScheduleIntervals(todayIntervals, true, true),
-    ``,
     separator,
-    ``,
     `📅 <b>Графік на завтра (${formatDate(tomorrow)}):</b>`,
-    ``,
     tomorrowText,
-    ``,
     separator,
-    ``,
     `🕐 <i>Оновлено: ${updateTime}</i>`,
-  ].filter(line => line !== null && line !== "").join("\n")
+  ].join("\n")
 
   console.log("✉️ Message generated successfully")
   return message
@@ -376,6 +453,12 @@ async function sendNotification(message) {
       })
 
       let data = await response.json()
+
+      // Якщо повідомлення не змінилося - це нормально, пропускаємо
+      if (!response.ok && data.description?.includes("message is not modified")) {
+        console.log(`ℹ️ Повідомлення не змінилося для чату ${chatId}, пропускаємо`)
+        continue
+      }
 
       // Якщо editMessageText не знайшло повідомлення - відправляємо нове
       if (!response.ok && data.description?.includes("message to edit not found")) {
