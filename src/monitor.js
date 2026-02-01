@@ -403,7 +403,7 @@ function getCurrentPowerStatus(intervals) {
   const powerStatus = getCurrentPowerStatus(todayIntervals)
 
   const message = [
-    `⚡️ <b>Статус електропостачання</b>`,
+    `⚡️ <b>Статус електропостачання за інформацією ДТЕК</b>`,
     powerStatus.statusText,
     powerStatus.nextEventText,
     separator,
