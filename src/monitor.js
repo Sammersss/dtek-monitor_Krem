@@ -354,7 +354,7 @@ function getCurrentPowerStatus(intervals) {
   }
 
   const queue = getQueueFromGraph(info)
-  const address = `${CITY}, ${STREET}`
+  const address = `${STREET}, ${CITY}`
 
   // Парсимо графік відключень для сьогодні
   const todayIntervals = parseScheduleIntervals(info, queue)
@@ -403,14 +403,14 @@ function getCurrentPowerStatus(intervals) {
   const powerStatus = getCurrentPowerStatus(todayIntervals)
 
   const message = [
-    `⚡️ <b>За інформацією ДТЕК наразі</b> 🏠 <b>за адресою:</b> ${address}`,
-    `🔢 <b>(черга:</b> ${queue})`,
+    `⚡️ <b>За інформацією ДТЕК наразі за адресою:</b>`,
+    `🏠 ${address} <b>(черга:</b> ${queue})`,
     powerStatus.statusText,
     powerStatus.nextEventText,
     separator,
     //`🏠 <b>Адреса:</b> ${address}`,
     //`🔢 <b>Черга:</b> ${queue}`,
-    separator,
+    //separator,
    // `📅 <b>Графік на сьогодні (${formatDate(today)}):</b>`,
    // formatScheduleIntervals(todayIntervals, true, true),
    // separator,
