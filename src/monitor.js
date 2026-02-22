@@ -403,12 +403,13 @@ function getCurrentPowerStatus(intervals) {
   const powerStatus = getCurrentPowerStatus(todayIntervals)
 
   const message = [
-    `⚡️ <b>Статус електропостачання за інформацією ДТЕК</b>`,
+    `⚡️ <b>За інформацією ДТЕК наразі</b> 🏠 <b>за адресою:</b> ${address}`,
+    `🔢 <b>(черга:</b> ${queue})`,
     powerStatus.statusText,
     powerStatus.nextEventText,
     separator,
-    `🏠 <b>Адреса:</b> ${address}`,
-    `🔢 <b>Черга:</b> ${queue}`,
+    //`🏠 <b>Адреса:</b> ${address}`,
+    //`🔢 <b>Черга:</b> ${queue}`,
     separator,
    // `📅 <b>Графік на сьогодні (${formatDate(today)}):</b>`,
    // formatScheduleIntervals(todayIntervals, true, true),
